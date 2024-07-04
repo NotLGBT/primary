@@ -1,0 +1,24 @@
+
+
+
+- hosts: pve01
+  become: true
+  tasks:
+  - name: Includ default variable file 
+    include_vars: /home/adminator/AnsibleProjects/DoneProject/ansible-structure/small-ansible/roles/base/vars/main.yaml
+  - name: Include the some_role role
+    import_tasks: /home/adminator/AnsibleProjects/DoneProject/ansible-structure/small-ansible/roles/base/tasks/main.yml
+    
+
+- hosts: "{{ servers_ip }}"
+  become: true
+  vars_files: /home/adminator/AnsibleProjects/DoneProject/ansible-structure/small-ansible/roles/base/vars/main.yaml
+  tasks:
+  - name: Includ default variable file 
+    include_vars: /home/adminator/AnsibleProjects/DoneProject/ansible-structure/small-ansible/roles/base/vars/main.yaml
+  - name: Include the some_role role
+    import_tasks: /home/adminator/AnsibleProjects/DoneProject/ansible-structure/small-ansible/roles/base/tasks/deploying.yml
+
+
+
+

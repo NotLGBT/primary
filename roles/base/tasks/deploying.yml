@@ -1,0 +1,22 @@
+
+
+
+  - name: Clone nginx-php-mysql repository
+    ansible.builtin.git:
+      repo: "{{ nginx_php_mysql_repo }}"
+      dest: "{{ project_directory }}"
+      version: NotLGBT/Lancelot
+  
+  - name: Change directory ownership
+    ansible.builtin.file:
+      path: "{{ project_directory }}"
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      recurse: true
+  
+  - name: Start Docker Compose services
+    shell: docker-compose up -d
+    args:
+      chdir: "{{ project_directory }}"
+
+

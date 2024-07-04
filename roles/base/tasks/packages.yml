@@ -1,0 +1,173 @@
+---
+    - name: Check Python 
+      ansible.builtin.command: python --version
+      register: python_installed
+      ignore_errors: true
+
+    - name: Add python candidate
+      ansible.builtin.apt_repository:
+        repo: ppa:deadsnakes/ppa
+        state: present
+      when: python_installed.failed
+
+    - name: Install Python packages 
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      loop:
+        - python3.11
+        - python3-pip
+      when: python_installed.failed
+    
+    - name: Install Proxmoxer
+      ansible.builtin.pip: 
+        name: 
+          - proxmoxer
+        state: present
+
+    - name: Check if Docker is installed
+      ansible.builtin.command: docker --version
+      register: docker_installed
+      ignore_errors: true
+    
+    - name: Update the apt package index
+      ansible.builtin.apt:
+        update_cache: yes
+      when: docker_installed.failed
+
+    - name: Install Docker related packages
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      loop:
+        - ca-certificates
+        - curl
+        - gnupg 
+        - lsb-release
+      when: docker_installed.failed
+
+    - name: Create directory for Docker's GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: docker_installed.failed
+
+    - name: Add Docker's official GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        keyring: /etc/apt/keyrings/docker.gpg
+        state: present
+      when: docker_installed.failed
+
+    - name: Chmod on docker.asc
+      ansible.builtin.file: 
+        path: /etc/apt/keyrings/docker.asc
+        state: directory
+        mode: 'a+r'
+      when: docker_installed.failed
+
+    - name: Print architecture variables
+      ansible.builtin.debug:
+        msg: "Architecture: {{ ansible_architecture }}, Codename: {{ ansible_lsb.codename }}"
+      when: docker_installed.failed
+    
+    - name: Add Docker’s official GPG key
+      ansible.builtin.shell: |
+        mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      when: docker_installed.failed
+
+
+    - name: Set up the Docker repository
+      ansible.builtin.shell: |
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      when: docker_installed.failed
+ 
+    # - name: Add Docker repository
+    #   ansible.builtin.apt_repository:
+    #     repo: >-
+    #       deb [arch={{ arch_mapping[ansible_architecture] | default(ansible_architecture) }}
+    #       signed-by=/etc/apt/keyrings/docker.gpg]
+    #       https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable
+    #     filename: docker
+    #     state: present
+    #   when: docker_installed.failed
+
+    - name: Install Docker and related components
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
+
+    - name: Add Docker group
+      ansible.builtin.group:
+        name: docker
+        state: present
+      when: docker_installed.failed
+
+    - name: Add user to Docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+      when: docker_installed.failed
+
+    - name: Enable and start Docker services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - docker.service
+        - containerd.service
+      when: docker_installed.failed
+    
+    # - name: Install Docker Compose using pip
+    #   ansible.builtin.pip:
+    #     name: docker-compose
+    #     state: present
+    #   when: docker_compose_installed.failed
+    
+    # - name: Create a symlink to /usr/bin
+    #   ansible.builtin.file:
+    #     src: /usr/local/bin/docker-compose
+    #     dest: /usr/bin/docker-compose
+    #     state: link
+    #   when: docker_compose_installed.failed
+
+    # - name: Check QM agent 
+    #   ansible.builtin.command: qm --version
+    #   register: qm_installed
+    #   ignore_errors: true
+
+    # - name: QM installation 
+    #   ansible.builtin.apt: 
+    #     name: 
+    #       - qemu-guest-agent
+    #     state: present
+    #   when: qm_installed.failed
+    
+    # - name: QM systemctl enable
+    #   ansible.builtin.systemd:
+    #     name: qemu-guest-agent
+    #     enabled: true
+    #     state: started
+    #   when: qm_installed.failed
+    
+    # - name: Reboot VM 
+    #   ansible.builtin.shell: | 
+    #     sudo systemctl reboot
+        
+    
+    
